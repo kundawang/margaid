@@ -259,6 +259,31 @@ func (svg *SVG) Polyline(points ...struct{ X, Y float64 }) *SVG {
 	return svg.Path(path.String())
 }
 
+// Polygon adds a closed polygon from a list of points.
+// Unlike Path, consecutive polygons are never merged into a
+// single element, so each polygon keeps the current style.
+func (svg *SVG) Polygon(points ...struct{ X, Y float64 }) *SVG {
+	if len(points) < 3 {
+		return svg
+	}
+
+	var path strings.Builder
+	first := points[0]
+	path.WriteString(fmt.Sprintf("M%s,%s ", ftos(first.X), ftos(first.Y)))
+
+	for _, p := range points[1:] {
+		path.WriteString(fmt.Sprintf("L%s,%s ", ftos(p.X), ftos(p.Y)))
+	}
+	path.WriteString("Z ")
+
+	svg.updateStyle()
+	svg.brackets.Add("path", br.Attributes{
+		"d":             path.String(),
+		"vector-effect": "non-scaling-stroke",
+	})
+	return svg
+}
+
 // Rect adds a rect defined by x, y, width and height
 func (svg *SVG) Rect(x, y, width, height float64) *SVG {
 	svg.updateStyle()
@@ -342,6 +367,17 @@ func (svg *SVG) Transform(transforms ...Transform) *SVG {
 // Fill sets current fill style
 func (svg *SVG) Fill(fill string) *SVG {
 	svg.setAttribute("fill", fill)
+	return svg
+}
+
+// FillOpacity sets the current fill opacity, [0..1].
+// Setting the opacity to 1 resets to the default, fully opaque.
+func (svg *SVG) FillOpacity(opacity float64) *SVG {
+	if opacity >= 1 {
+		svg.setAttribute("fill-opacity", "")
+	} else {
+		svg.setAttribute("fill-opacity", strconv.FormatFloat(opacity, 'f', -1, 64))
+	}
 	return svg
 }
 

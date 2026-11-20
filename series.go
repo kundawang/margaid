@@ -14,6 +14,8 @@ type Series struct {
 	minY   float64
 	maxY   float64
 
+	minMaxInitialized bool
+
 	title string
 
 	capper     Capper
@@ -144,22 +146,32 @@ func (s *Series) Add(values ...Value) {
 	}
 
 	for _, v := range values {
-		if s.values.Len() == 0 {
-			s.minX = v.X
-			s.maxX = v.X
-			s.minY = v.Y
-			s.maxY = v.Y
-		} else {
-			s.minX = math.Min(s.minX, v.X)
-			s.maxX = math.Max(s.maxX, v.X)
-			s.minY = math.Min(s.minY, v.Y)
-			s.maxY = math.Max(s.maxY, v.Y)
+		if isFinite(v.X) && isFinite(v.Y) {
+			if !s.minMaxInitialized {
+				s.minX = v.X
+				s.maxX = v.X
+				s.minY = v.Y
+				s.maxY = v.Y
+				s.minMaxInitialized = true
+			} else {
+				s.minX = math.Min(s.minX, v.X)
+				s.maxX = math.Max(s.maxX, v.X)
+				s.minY = math.Min(s.minY, v.Y)
+				s.maxY = math.Max(s.maxY, v.Y)
+			}
 		}
 		s.values.PushBack(v)
 		if s.capper != nil {
 			s.capper(s.values)
 		}
 	}
+}
+
+// isFinite reports whether v is neither NaN nor +/-Inf.
+// Non-finite values are kept in the series (they act as gap
+// markers for band plots) but never affect the value range.
+func isFinite(v float64) bool {
+	return !math.IsNaN(v) && !math.IsInf(v, 0)
 }
 
 // Zip merges two slices of floats into pairs and adds
@@ -179,24 +191,26 @@ func (s *Series) Zip(xValues, yValues []float64) {
 }
 
 func (s *Series) updateMinMax() {
-	if s.values.Len() == 0 {
-		return
-	}
+	s.minMaxInitialized = false
 
 	values := s.Values()
-	values.Next()
-	current := values.Get()
-	s.minX = current.X
-	s.maxX = current.X
-	s.minY = current.Y
-	s.maxY = current.Y
-
 	for values.Next() {
-		current = values.Get()
-		s.minX = math.Min(s.minX, current.X)
-		s.maxX = math.Max(s.maxX, current.X)
-		s.minY = math.Min(s.minY, current.Y)
-		s.maxY = math.Max(s.maxY, current.Y)
+		current := values.Get()
+		if !isFinite(current.X) || !isFinite(current.Y) {
+			continue
+		}
+		if !s.minMaxInitialized {
+			s.minX = current.X
+			s.maxX = current.X
+			s.minY = current.Y
+			s.maxY = current.Y
+			s.minMaxInitialized = true
+		} else {
+			s.minX = math.Min(s.minX, current.X)
+			s.maxX = math.Max(s.maxX, current.X)
+			s.minY = math.Min(s.minY, current.Y)
+			s.maxY = math.Max(s.maxY, current.Y)
+		}
 	}
 }
 
@@ -300,11 +314,11 @@ func Titled(title string) SeriesOption {
 // TimeFromSeconds converts from seconds since the epoch to time.Time
 func TimeFromSeconds(seconds float64) time.Time {
 	wholeSecs := int64(seconds)
-	nanos := int64((seconds - float64(wholeSecs)) * 1E9)
+	nanos := int64((seconds - float64(wholeSecs)) * 1e9)
 	return time.Unix(wholeSecs, nanos)
 }
 
 // SecondsFromTime converts from time.Time to seconds since the epoch
 func SecondsFromTime(time time.Time) float64 {
-	return float64(time.UnixNano()) / 1E9
+	return float64(time.UnixNano()) / 1e9
 }

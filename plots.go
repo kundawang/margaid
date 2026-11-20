@@ -13,6 +13,7 @@ type plotOptions struct {
 	yAxis       Axis
 	marker      string
 	strokeWidth float32
+	alpha       float64
 }
 
 // Using is the base type for plotting options
@@ -23,6 +24,7 @@ func getPlotOptions(using []Using) plotOptions {
 		xAxis:       XAxis,
 		yAxis:       YAxis,
 		strokeWidth: 3,
+		alpha:       defaultBandAlpha,
 	}
 
 	for _, u := range using {
@@ -51,6 +53,14 @@ func UsingMarker(marker string) Using {
 func UsingStrokeWidth(width float32) Using {
 	return func(o *plotOptions) {
 		o.strokeWidth = width
+	}
+}
+
+// UsingAlpha sets the fill opacity [0..1] of band plots.
+// Values outside the range are clamped.
+func UsingAlpha(alpha float64) Using {
+	return func(o *plotOptions) {
+		o.alpha = math.Max(0, math.Min(1, alpha))
 	}
 }
 

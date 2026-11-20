@@ -12,7 +12,7 @@ It's also the word "diagraM" spelled backwards.
 
 Margaid plots series of data to an SVG image. Series can be capped by size or time to simplify realtime data collection.
 
-Plots are drawn using straight lines, smooth lines or bars.
+Plots are drawn using straight lines, smooth lines or bars. Semi-transparent confidence bands between a lower and an upper bound series can be drawn with `Band`, optionally overlaid with a mean line. Missing sections (non-finite values) break the band fill.
 
 Each axis has a fixed or automatic range, linear or log projection, configurable labels and optional grid lines.
 
